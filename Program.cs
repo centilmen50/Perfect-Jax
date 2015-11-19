@@ -20,17 +20,19 @@ namespace Perfect_Jax
         public static Spell.Active W;
         public static Spell.Active E;
         public static Spell.Active R;
-        public static Menu Menu, FarmingMenu, MiscMenu, DrawMenu, HarassMenu, ComboMenu, SmiteMenu, UpdateMenu;
+        static Spell.Targeted Smite = null;
+        public static Menu Menu, FarmingMenu, MiscMenu, DrawMenu, HarassMenu, ComboMenu, SmiteMenu;
         static Item Healthpot;
         static Item Manapot;
-        static Item CrystalFlask;
+        static Item HuntersPotion;
+        static Item CorruptionPotion;
+        static Item RefillablePotion;
         public static SpellSlot SmiteSlot = SpellSlot.Unknown;
         public static SpellSlot IgniteSlot = SpellSlot.Unknown;
         private static readonly int[] SmitePurple = { 3713, 3726, 3725, 3726, 3723 };
         private static readonly int[] SmiteGrey = { 3711, 3722, 3721, 3720, 3719 };
         private static readonly int[] SmiteRed = { 3715, 3718, 3717, 3716, 3714 };
         private static readonly int[] SmiteBlue = { 3706, 3710, 3709, 3708, 3707 };
-        public static float WardRange = 600f;
         private static bool eCounterStrike = false;
 
 
@@ -72,10 +74,16 @@ namespace Perfect_Jax
 
 
             Bootstrap.Init(null);
-
+            SpellDataInst smite = _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).Any() ? _Player.Spellbook.Spells.Where(spell => spell.Name.Contains("smite")).First() : null;
+            if (smite != null)
+            {
+                Smite = new Spell.Targeted(smite.Slot, 500);
+            }
             Healthpot = new Item(2003, 0);
             Manapot = new Item(2004, 0);
-            CrystalFlask = new Item(2032, 0);
+            RefillablePotion = new Item(2031, 0);
+            HuntersPotion = new Item(2032, 0);
+            CorruptionPotion = new Item(2033, 0);
             uint level = (uint)Player.Instance.Level;
             Q = new Spell.Targeted(SpellSlot.Q, 700);
             W = new Spell.Active(SpellSlot.W);
@@ -113,12 +121,12 @@ namespace Perfect_Jax
             FarmingMenu.Add("ElaneclearMana", new Slider("Mana < %", 60, 0, 100));
 
             FarmingMenu.AddLabel("Jungle Clear");
-            FarmingMenu.Add("Qjungle", new CheckBox("Use Q in Jungle"));
-            FarmingMenu.Add("QjungleMana", new Slider("Mana < %", 45, 0, 100));
-            FarmingMenu.Add("Wjungle", new CheckBox("Use W in Jungle"));
-            FarmingMenu.Add("WjungleMana", new Slider("Mana < %", 35, 0, 100));
-            FarmingMenu.Add("Ejungle", new CheckBox("Use E in Jungle"));
-            FarmingMenu.Add("EjungleMan", new Slider("Mana < %", 60, 0, 100));
+            FarmingMenu.Add("QJungleClear", new CheckBox("Use Q in Jungle"));
+            FarmingMenu.Add("QJungleClearMana", new Slider("Mana < %", 60, 0, 100));
+            FarmingMenu.Add("WJungleClear", new CheckBox("Use W in Jungle"));
+            FarmingMenu.Add("WJungleClearMana", new Slider("Mana < %", 30, 0, 100));
+            FarmingMenu.Add("EJungleClear", new CheckBox("Use E in Jungle"));
+            FarmingMenu.Add("EJungleClearMana", new Slider("Mana < %", 30, 0, 100));
 
             FarmingMenu.AddLabel("Last Hit Settings");
             FarmingMenu.Add("Qlasthit", new CheckBox("Use Q LastHit"));
@@ -163,17 +171,13 @@ namespace Perfect_Jax
             MiscMenu.Add("useHPV", new Slider("HP < %", 45, 0, 100));
             MiscMenu.Add("useMana", new CheckBox("Use Mana Potion"));
             MiscMenu.Add("useManaV", new Slider("Mana < %", 45, 0, 100));
-            MiscMenu.Add("useCrystal", new CheckBox("Use Hunter Potion"));
+            MiscMenu.Add("useCrystal", new CheckBox("Use Refillable Potions"));
             MiscMenu.Add("useCrystalHPV", new Slider("HP < %", 65, 0, 100));
             MiscMenu.Add("useCrystalManaV", new Slider("Mana < %", 65, 0, 100));
 
             DrawMenu = Menu.AddSubMenu("Draw Settings", "Drawings");
             DrawMenu.Add("drawAA", new CheckBox("Draw AA Range"));
             DrawMenu.Add("drawQ", new CheckBox("Draw Q"));
-
-            UpdateMenu = Menu.AddSubMenu("Last Update Logs", "Updates");
-            UpdateMenu.AddLabel("V0.0.1");
-            UpdateMenu.AddLabel("-Share");
 
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
@@ -207,7 +211,27 @@ namespace Perfect_Jax
             var igntarget = TargetSelector.GetTarget(600, DamageType.True);
             var t = TargetSelector.GetTarget(Q.Range, DamageType.Magical);
 
-            if(eCounterStrike == true)
+            if (Smite != null)
+            {
+                if (Smite.IsReady() && SmiteMenu["Use Smite?"].Cast<CheckBox>().CurrentValue)
+                {
+                    Obj_AI_Minion Mob = EntityManager.MinionsAndMonsters.GetJungleMonsters(_Player.Position, Smite.Range).FirstOrDefault();
+
+                    if (Mob != default(Obj_AI_Minion))
+                    {
+                        bool kill = GetSmiteDamage() >= Mob.Health;
+
+                        if (kill)
+                        {
+                            if ((Mob.Name.Contains("SRU_Dragon") || Mob.Name.Contains("SRU_Baron"))) Smite.Cast(Mob);
+                            else if (Mob.Name.StartsWith("SRU_Red") && SmiteMenu["Red?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
+                            else if (Mob.Name.StartsWith("SRU_Blue") && SmiteMenu["Blue?"].Cast<CheckBox>().CurrentValue) Smite.Cast(Mob);
+                        }
+                    }
+                }
+            }
+
+            if (eCounterStrike == true)
             {
                 eCounterStrike = false;
                 E.Cast();
@@ -231,11 +255,19 @@ namespace Perfect_Jax
             
             if (Crystal && Player.Instance.HealthPercent < CrystalHPv || Crystal && Player.Instance.ManaPercent < CrystalManav)
             {
-                if (Item.HasItem(CrystalFlask.Id) && Item.CanUseItem(CrystalFlask.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask"))
+                if (Item.HasItem(RefillablePotion.Id) && Item.CanUseItem(RefillablePotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask"))
                 {
-                    CrystalFlask.Cast();
+                    RefillablePotion.Cast();
                 }
-               
+                else if (Item.HasItem(CorruptionPotion.Id) && Item.CanUseItem(CorruptionPotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask") && !Player.HasBuff("ItemDarkCrystalFlaskJungle"))
+                {
+                    CorruptionPotion.Cast();
+                }
+                else if (Item.HasItem(HuntersPotion.Id) && Item.CanUseItem(HuntersPotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask") && !Player.HasBuff("ItemCrystalFlaskJungle"))
+                {
+                    HuntersPotion.Cast();
+                }
+
             }
 
             if (useItem && target.IsValidTarget(400) && !target.IsDead && !target.IsZombie && target.HealthPercent < 100)
@@ -290,16 +322,17 @@ namespace Perfect_Jax
             var useR = ComboMenu["RCombo"].Cast<CheckBox>().CurrentValue;
             var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
 
-            if (useQ && Q.IsReady() && target.IsValidTarget(Q.Range) && !target.IsDead && !target.IsZombie)
-            {
-                Q.Cast(target);
-            }
             if (E.IsReady() && useE && target.IsValidTarget(E.Range) && !target.IsDead && !target.IsZombie)
             {
                 eCounterStrike = true;
                 E.Cast();
             }
-            if (W.IsReady() && useW && target.IsValidTarget(125) && !target.IsDead && !target.IsZombie )
+            if (useQ && Q.IsReady() && target.IsValidTarget(Q.Range) && !target.IsValidTarget(_Player.AttackRange) && !target.IsDead && !target.IsZombie)
+            {
+                Q.Cast(target);
+            }
+            
+            if (W.IsReady() && useW && target.IsValidTarget(_Player.AttackRange) && !target.IsDead && !target.IsZombie )
             {
                 W.Cast();
             }
@@ -384,6 +417,30 @@ namespace Perfect_Jax
             }
 
         }
+        private static void JungleClear()
+        {
+            var useQ = FarmingMenu["QJungleClear"].Cast<CheckBox>().CurrentValue;
+            var useQMana = FarmingMenu["QJungleClearMana"].Cast<Slider>().CurrentValue;
+            var useW = FarmingMenu["WJungleClear"].Cast<CheckBox>().CurrentValue;
+            var useWMana = FarmingMenu["WJungleClearMana"].Cast<Slider>().CurrentValue;
+            var useE = FarmingMenu["EJungleClear"].Cast<CheckBox>().CurrentValue;
+            var useEMana = FarmingMenu["EJungleClearMana"].Cast<Slider>().CurrentValue;
+            foreach (var monster in EntityManager.MinionsAndMonsters.Monsters)
+            {
+                if (_Player.Distance(monster) <= _Player.AttackRange && useQ && Player.Instance.ManaPercent > useWMana)
+                {
+                    W.Cast();
+                }
+                if(_Player.Distance(monster) <= E.Range && useE && Player.Instance.ManaPercent > useEMana)
+                {
+                    E.Cast();
+                }
+                if(!monster.IsValidTarget(230) && useQ && Player.Instance.ManaPercent > useQMana)
+                {
+                    Q.Cast(monster);
+                }
+            }
+        }
         private static void LaneClear()
         {
             var useQ = FarmingMenu["QLaneClear"].Cast<CheckBox>().CurrentValue;
@@ -410,33 +467,20 @@ namespace Perfect_Jax
                 }
             }
         }
-        private static void JungleClear()
-        {
-            var useQ = FarmingMenu["Qjungle"].Cast<CheckBox>().CurrentValue;
-            var useQMana = FarmingMenu["QjungleMana"].Cast<Slider>().CurrentValue;
-            var useW = FarmingMenu["Wjungle"].Cast<CheckBox>().CurrentValue;
-            var useWMana = FarmingMenu["WjungleMana"].Cast<Slider>().CurrentValue;
-            var useE = FarmingMenu["Ejungle"].Cast<CheckBox>().CurrentValue;
-            var useEHP = FarmingMenu["EjungleMana"].Cast<Slider>().CurrentValue;
-            foreach (var monster in EntityManager.MinionsAndMonsters.Monsters)
-            {
-                if (useQ && Q.IsReady() && Player.Instance.ManaPercent > useQMana)
-                {
-                    Q.Cast(monster);
-                }
-                if (useW && W.IsReady() && Player.Instance.ManaPercent > useWMana)
-                {
-                    W.Cast();
-                }
-                if (useE && E.IsReady() && Player.Instance.HealthPercent > useEHP)
-                {
-                    eCounterStrike = true;
-                    E.Cast();
-                }
 
-                HandleItems();
-            }
+        static float GetSmiteDamage()
+        {
+            float damage = new float();
+
+            if (_Player.Level < 10) damage = 360 + (_Player.Level - 1) * 30;
+
+            else if (_Player.Level < 15) damage = 280 + (_Player.Level - 1) * 40;
+
+            else if (_Player.Level < 19) damage = 150 + (_Player.Level - 1) * 50;
+
+            return damage;
         }
+
         private static void LastHit()
         {
             var useQ = FarmingMenu["Qlasthit"].Cast<CheckBox>().CurrentValue;
@@ -457,7 +501,6 @@ namespace Perfect_Jax
         }
         private static void autoE()
         {
-            var minions = ObjectManager.Get<Obj_AI_Base>().OrderBy(m => m.Health).Where(m => m.IsMinion && m.IsEnemy && !m.IsDead);
             var ENEMY = HeroManager.Enemies.OrderBy(m => m.Health).Where(m => m.IsEnemy && !m.IsMe && !m.IsDead);
             var target = TargetSelector.GetTarget(E.Range, DamageType.True);
             var useE = MiscMenu["autoE"].Cast<CheckBox>().CurrentValue;
