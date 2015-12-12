@@ -91,10 +91,7 @@ namespace Perfect_Jax
             R = new Spell.Active(SpellSlot.R);
 
             Menu = MainMenu.AddMenu("Perfect Jax", "perfectjax");
-            Menu.AddLabel("Perrrrrrrrrfect Ass");
-            Menu.AddSeparator();
-
-            
+            Menu.AddLabel("Perrrrrrrrrfect Ass");           
 
             ComboMenu = Menu.AddSubMenu("Combo Settings","ComboSettings");            
             ComboMenu.AddLabel("Combo Settings");
@@ -177,7 +174,7 @@ namespace Perfect_Jax
 
             DrawMenu = Menu.AddSubMenu("Draw Settings", "Drawings");
             DrawMenu.Add("drawAA", new CheckBox("Draw AA Range"));
-            DrawMenu.Add("drawQ", new CheckBox("Draw Q"));
+            DrawMenu.Add("drawQ", new CheckBox("Draw Q Range"));
 
             Game.OnTick += Game_OnTick;
             Drawing.OnDraw += Drawing_OnDraw;
@@ -243,6 +240,10 @@ namespace Perfect_Jax
                 {
                     Healthpot.Cast();
                 }
+                else if (Item.HasItem(RefillablePotion.Id) && Item.CanUseItem(RefillablePotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask"))
+                {
+                    RefillablePotion.Cast();
+                }
             }
 
             if (Mpot && Player.Instance.ManaPercent < Manav)
@@ -252,14 +253,11 @@ namespace Perfect_Jax
                     Manapot.Cast();
                 }
             }
-            
-            if (Crystal && Player.Instance.HealthPercent < CrystalHPv || Crystal && Player.Instance.ManaPercent < CrystalManav)
+
+                if (Crystal && Player.Instance.HealthPercent < CrystalHPv || Crystal && Player.Instance.ManaPercent < CrystalManav)
             {
-                if (Item.HasItem(RefillablePotion.Id) && Item.CanUseItem(RefillablePotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask"))
-                {
-                    RefillablePotion.Cast();
-                }
-                else if (Item.HasItem(CorruptionPotion.Id) && Item.CanUseItem(CorruptionPotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask") && !Player.HasBuff("ItemDarkCrystalFlaskJungle"))
+                
+                if (Item.HasItem(CorruptionPotion.Id) && Item.CanUseItem(CorruptionPotion.Id) && !Player.HasBuff("RegenerationPotion") && !Player.HasBuff("FlaskOfCrystalWater") && !Player.HasBuff("ItemCrystalFlask") && !Player.HasBuff("ItemDarkCrystalFlaskJungle"))
                 {
                     CorruptionPotion.Cast();
                 }
@@ -344,6 +342,10 @@ namespace Perfect_Jax
             {
                 HandleItems();
             }
+            if (useItem && target.IsValidTarget(800) && !target.IsDead && !target.IsZombie)
+            {
+                botrks();
+            }
 
         }
         private static void KillSteal()
@@ -362,25 +364,13 @@ namespace Perfect_Jax
                 E.Cast();
             }
         }
-
-        internal static void HandleItems()
+        internal static void botrks()
         {
             var botrktarget = TargetSelector.GetTarget(550, DamageType.Physical);
             var youmutarget = TargetSelector.GetTarget(800, DamageType.Physical);
             var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
             var useBotrkHP = MiscMenu["botrkHP"].Cast<Slider>().CurrentValue;
             var useBotrkEnemyHP = MiscMenu["botrkenemyHP"].Cast<Slider>().CurrentValue;
-            //HYDRA
-            if (useItem && Item.HasItem(3077) && Item.CanUseItem(3077))
-                Item.UseItem(3077);
-
-            //TİAMAT
-            if (useItem && Item.HasItem(3074) && Item.CanUseItem(3074))
-                Item.UseItem(3074);
-
-            //NEW ITEM
-            if (useItem && Item.HasItem(3748) && Item.CanUseItem(3748))
-                Item.UseItem(3748);
 
             //BİLGEWATER CUTLASS
             if (useItem && Item.HasItem(3144) && Item.CanUseItem(3144) && botrktarget.HealthPercent <= useBotrkEnemyHP && _Player.HealthPercent <= useBotrkHP)
@@ -393,6 +383,26 @@ namespace Perfect_Jax
             //YOUMU
             if (useItem && Item.HasItem(3142) && Item.CanUseItem(3142) && youmutarget.IsValidTarget(800))
                 Item.UseItem(3142);
+        }
+        internal static void HandleItems()
+        {
+            var botrktarget = TargetSelector.GetTarget(550, DamageType.Physical);
+            var youmutarget = TargetSelector.GetTarget(800, DamageType.Physical);
+            var useItem = ComboMenu["useTiamat"].Cast<CheckBox>().CurrentValue;
+            
+            //HYDRA
+            if (useItem && Item.HasItem(3077) && Item.CanUseItem(3077))
+                Item.UseItem(3077);
+
+            //TİAMAT
+            if (useItem && Item.HasItem(3074) && Item.CanUseItem(3074))
+                Item.UseItem(3074);
+
+            //NEW ITEM
+            if (useItem && Item.HasItem(3748) && Item.CanUseItem(3748))
+                Item.UseItem(3748);
+
+            
         }
 
         private static void Harass()

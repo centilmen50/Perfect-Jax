@@ -12,3 +12,6 @@ C:\Users\Mertss\Desktop\Perfect Jax\obj\Debug\Perfect_Jax.pdb
 C:\Users\Mertss\Desktop\My Addons\Perfect Jax\bin\Debug\Perfect_Jax.exe.config
 C:\Users\Mertss\Desktop\My Addons\Perfect Jax\obj\Debug\Perfect_Jax.exe
 C:\Users\Mertss\Desktop\My Addons\Perfect Jax\obj\Debug\Perfect_Jax.pdb
+C:\Users\Mertss\Desktop\Üzerinde Çalıştığım Addonalr\My Addons\Perfect Jax\bin\Debug\Perfect_Jax.exe.config
+C:\Users\Mertss\Desktop\Üzerinde Çalıştığım Addonalr\My Addons\Perfect Jax\obj\Debug\Perfect_Jax.exe
+C:\Users\Mertss\Desktop\Üzerinde Çalıştığım Addonalr\My Addons\Perfect Jax\obj\Debug\Perfect_Jax.pdb
